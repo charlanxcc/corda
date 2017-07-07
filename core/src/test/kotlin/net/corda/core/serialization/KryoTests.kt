@@ -114,11 +114,11 @@ class KryoTests {
     fun `serialize - deserialize MetaData`() {
         val testString = "Hello World"
         val testBytes = testString.toByteArray()
-        val keyPair1 = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        val keyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
 
-        val meta = MetaData(testBytes.sha256(), keyPair1.public, ExtraMetaData(1))
-        val serializedMetaData = meta.bytes()
-        val meta2 = serializedMetaData.deserialize<MetaData>()
+        val meta = MerkleRootWithMeta(testBytes.sha256(), TransactionMeta(1, keyPair.public))
+        val serializedMerkleRootWithMeta = meta.bytes()
+        val meta2 = serializedMerkleRootWithMeta.deserialize<MerkleRootWithMeta>()
         assertEquals(meta2, meta)
     }
 
@@ -126,12 +126,12 @@ class KryoTests {
     fun `serialize ExtraMetaData - deserialise and create a MetaData`() {
         val testString = "Hello World"
         val testBytes = testString.toByteArray()
-        val keyPair1 = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        val keyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
 
-        val meta = MetaData(testBytes.sha256(), keyPair1.public, ExtraMetaData(1))
-        val serializedBExtraMetaData = meta.extraMetaDataBytes()
-        val extraMetaData = serializedBExtraMetaData.deserialize<ExtraMetaData>()
-        val meta2 = MetaData(meta.merkleRoot, meta.publicKey, extraMetaData)
+        val meta = MerkleRootWithMeta(testBytes.sha256(), TransactionMeta(1, keyPair.public))
+        val serializedTransactionMeta = meta.extraMetaDataBytes()
+        val transactionMeta = serializedTransactionMeta.deserialize<TransactionMeta>()
+        val meta2 = MerkleRootWithMeta(meta.merkleRoot, transactionMeta)
         assertEquals(meta2, meta)
     }
 

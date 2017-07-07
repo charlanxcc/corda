@@ -125,7 +125,7 @@ fun entropyToKeyPair(entropy: BigInteger): KeyPair = Crypto.deriveKeyPairFromEnt
  * @throws SignatureException if signing is not possible due to malformed data or private key.
  */
 @Throws(InvalidKeyException::class, SignatureException::class)
-fun PrivateKey.sign(metaData: MetaData): TransactionSignature = Crypto.doSign(this, metaData)
+fun PrivateKey.sign(metaData: MerkleRootWithMeta): TransactionSignature = Crypto.doSign(this, metaData)
 
 /**
  * Helper function to verify a signature.
@@ -142,8 +142,8 @@ fun PublicKey.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = 
 
 /**
  * Helper function to verify a metadata attached signature. It is noted that the transactionSignature contains
- * signatureData and a [MetaData] object that contains the signer's public key and the transaction's Merkle root.
- * @param transactionSignature a [TransactionSignature] object that includes both signed and clear [MetaData].
+ * signatureData and a [MerkleRootWithMeta] object that contains the signer's public key and the transaction's Merkle root.
+ * @param transactionSignature a [TransactionSignature] object that includes both signed and clear [MerkleRootWithMeta].
  * @throws InvalidKeyException if the key is invalid.
  * @throws SignatureException if this signatureData object is not initialized properly,
  * the passed-in signatureData is improperly encoded or of the wrong type,

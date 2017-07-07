@@ -568,35 +568,35 @@ fun <T> Kryo.withoutReferences(block: () -> T): T {
 
 /** For serialising a MetaData object. */
 @ThreadSafe
-object MetaDataSerializer : Serializer<MetaData>() {
-    override fun write(kryo: Kryo, output: Output, obj: MetaData) {
+object MerkleRootWithMetaSerializer : Serializer<MerkleRootWithMeta>() {
+    override fun write(kryo: Kryo, output: Output, obj: MerkleRootWithMeta) {
         kryo.writeClassAndObject(output, obj.merkleRoot)
-        output.writeBytesWithLength(obj.publicKey.encoded)
-        kryo.writeClassAndObject(output, obj.extraMetaData)
+        kryo.writeClassAndObject(output, obj.transactionMeta)
     }
 
     @Suppress("UNCHECKED_CAST")
     @Throws(InvalidKeySpecException::class)
-    override fun read(kryo: Kryo, input: Input, type: Class<MetaData>): MetaData {
+    override fun read(kryo: Kryo, input: Input, type: Class<MerkleRootWithMeta>): MerkleRootWithMeta {
         val merkleRoot = kryo.readClassAndObject(input) as SecureHash
-        val publicKey = Crypto.decodePublicKey(input.readBytesWithLength())
-        val extraMetaData = kryo.readClassAndObject(input) as ExtraMetaData
-        return MetaData(merkleRoot, publicKey, extraMetaData)
+        val transactionMeta = kryo.readClassAndObject(input) as TransactionMeta
+        return MerkleRootWithMeta(merkleRoot, transactionMeta)
     }
 }
 
-/** For serialising an ExtraMetaData object. */
+/** For serialising an TransactionMeta object. */
 @ThreadSafe
-object ExtraMetaDataSerializer : Serializer<ExtraMetaData>() {
-    override fun write(kryo: Kryo, output: Output, obj: ExtraMetaData) {
+object TransactionMetaSerializer : Serializer<TransactionMeta>() {
+    override fun write(kryo: Kryo, output: Output, obj: TransactionMeta) {
         output.writeInt(obj.platformVersion)
+        output.writeBytesWithLength(obj.publicKey.encoded)
     }
 
     @Suppress("UNCHECKED_CAST")
     @Throws(InvalidKeySpecException::class)
-    override fun read(kryo: Kryo, input: Input, type: Class<ExtraMetaData>): ExtraMetaData {
+    override fun read(kryo: Kryo, input: Input, type: Class<TransactionMeta>): TransactionMeta {
         val platformVersion = input.readInt()
-        return ExtraMetaData(platformVersion)
+        val publicKey = Crypto.decodePublicKey(input.readBytesWithLength())
+        return TransactionMeta(platformVersion, publicKey)
     }
 }
 

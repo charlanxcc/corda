@@ -374,24 +374,24 @@ object Crypto {
     }
 
     /**
-     * Generic way to sign [MetaData] objects with a [PrivateKey].
-     * [MetaData] is a wrapper over the transaction's Merkle root in order to attach extra information, such as a timestamp or partial and blind signature indicators.
+     * Generic way to sign [MerkleRootWithMeta] objects with a [PrivateKey].
+     * [MerkleRootWithMeta] is a wrapper over the transaction's Merkle root in order to attach extra information, such as a timestamp or partial and blind signature indicators.
      * @param privateKey the signer's [PrivateKey].
-     * @param metaData a [MetaData] object that adds extra information to a transaction.
-     * @return a [TransactionSignature] object than contains the output of a successful signing and the metaData.
+     * @param merkleRootWithMeta a [MerkleRootWithMeta] object that adds extra information to a transaction.
+     * @return a [TransactionSignature] object than contains the output of a successful signing and the merkleRootWithMeta.
      * @throws IllegalArgumentException if the signature scheme is not supported for this private key or
-     * if metaData.schemeCodeName is not aligned with key type.
+     * if merkleRootWithMeta.schemeCodeName is not aligned with key type.
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
     @Throws(InvalidKeyException::class, SignatureException::class)
-    fun doSign(privateKey: PrivateKey, metaData: MetaData): TransactionSignature {
+    fun doSign(privateKey: PrivateKey, merkleRootWithMeta: MerkleRootWithMeta): TransactionSignature {
         val sigKey: SignatureScheme = findSignatureScheme(privateKey)
-        val sigMetaData: SignatureScheme = findSignatureScheme(metaData.publicKey)
+        val sigMetaData: SignatureScheme = findSignatureScheme(merkleRootWithMeta.transactionMeta.publicKey)
         if (sigKey != sigMetaData) throw IllegalArgumentException("Metadata schemeCodeName: ${sigMetaData.schemeCodeName}" +
                 " is not aligned with the key type: ${sigKey.schemeCodeName}.")
-        val signatureData = doSign(sigKey.schemeCodeName, privateKey, metaData.bytes())
-        return TransactionSignature(signatureData, metaData)
+        val signatureData = doSign(sigKey.schemeCodeName, privateKey, merkleRootWithMeta.bytes())
+        return TransactionSignature(signatureData, merkleRootWithMeta)
     }
 
     /**
@@ -470,12 +470,12 @@ object Crypto {
      */
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doVerify(publicKey: PublicKey, merkleRoot: SecureHash, transactionSignature: TransactionSignature): Boolean {
-        require(merkleRoot == transactionSignature.metaData.merkleRoot) { "MetaData's tx merkle root: " +
-                "${transactionSignature.metaData.merkleRoot} does not match the input tx merkle root: $merkleRoot." }
+        require(merkleRoot == transactionSignature.merkleRootWithMeta.merkleRoot) { "MetaData's tx merkle root: " +
+                "${transactionSignature.merkleRootWithMeta.merkleRoot} does not match the input tx merkle root: $merkleRoot." }
 
-        require (publicKey == transactionSignature.metaData.publicKey) { "MetaData's publicKey: " +
-                "${transactionSignature.metaData.publicKey.toStringShort()} does not match the input verification key." }
-        return Crypto.doVerify(publicKey, transactionSignature.signatureData, transactionSignature.metaData.bytes())
+        require (publicKey == transactionSignature.merkleRootWithMeta.transactionMeta.publicKey) { "MetaData's publicKey: " +
+                "${transactionSignature.merkleRootWithMeta.transactionMeta.publicKey.toStringShort()} does not match the input verification key." }
+        return Crypto.doVerify(publicKey, transactionSignature.signatureData, transactionSignature.merkleRootWithMeta.bytes())
     }
 
     /**
