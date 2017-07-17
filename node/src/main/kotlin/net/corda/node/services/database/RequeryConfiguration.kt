@@ -42,6 +42,22 @@ class RequeryConfiguration(val properties: Properties, val useDefaultLogging: Bo
         val tables = SchemaModifier(configuration)
         val mode = TableCreationMode.CREATE_NOT_EXISTS
         tables.createTables(mode)
+
+        // NB: Need indexes here for softLockReserve and softLockRelease.
+        // `requery' index scheme doesn't work because of 1) inheritance and
+        // 2) order of columns.
+        // KotlinEntityDataStore.raw() doesn't work, either
+        try {
+        val conn = configuration.getConnectionProvider()?.getConnection()
+        if (conn != null) {
+            conn.commit()
+            conn.prepareStatement("Create Index If Not Exists ix1 On vault_states (state_status, lock_id, transaction_id, output_index)").executeUpdate()
+            conn.prepareStatement("Create Index If Not Exists ix2 On vault_states (state_status, lock_id)").executeUpdate()
+        }
+        } catch (t: Throwable) {
+            //logger.error(t.toString())
+        }
+
         return KotlinEntityDataStore(configuration)
     }
 

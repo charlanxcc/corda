@@ -73,6 +73,16 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     }
     private val mutex = ThreadBox(InnerState())
 
+    private fun getCustomKey(x: ContractState, txId: String): String {
+        try {
+            val method = x.javaClass.getMethod("getCustomKey")
+            return method.invoke(x) as String
+        } catch (e: java.lang.Exception) {
+            print(e)
+            return txId;
+        }
+    }
+
     private fun recordUpdate(update: Vault.Update): Vault.Update {
         if (update != Vault.NoUpdate) {
             val producedStateRefs = update.produced.map { it.ref }
@@ -91,6 +101,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                         notaryName = it.value.state.notary.name.toString()
                         notaryKey = it.value.state.notary.owningKey.toBase58String()
                         recordedTime = services.clock.instant()
+                        customKey = getCustomKey(it.value.state.data, it.key.txhash.toString())
                     }
                     insert(state)
                 }
@@ -191,7 +202,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                             .map { it ->
                                 val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
                                 val state = it.contractState.deserialize<TransactionState<T>>(storageKryo())
-                                Vault.StateMetadata(stateRef, it.contractStateClassName, it.recordedTime, it.consumedTime, it.stateStatus, it.notaryName, it.notaryKey, it.lockId, it.lockUpdateTime)
+                                Vault.StateMetadata(stateRef, it.contractStateClassName, it.recordedTime, it.consumedTime, it.stateStatus, it.notaryName, it.notaryKey, it.lockId, it.lockUpdateTime, it.customKey)
                                 StateAndRef(state, stateRef)
                             }
                 }
@@ -256,12 +267,29 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
             val stateRefArgs = stateRefArgs(stateRefs)
             try {
                 session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+                    val q = update(VaultStatesEntity::class)
+                        .set(VaultStatesEntity.LOCK_ID, lockId.toString())
+                        .set(VaultStatesEntity.LOCK_UPDATE_TIME, softLockTimestamp)
+                        .where(VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
+                        .and((VaultStatesEntity.LOCK_ID eq lockId.toString()) or (VaultStatesEntity.LOCK_ID.isNull()))
+                    if (stateRefs.size == 0) {
+                    } else if (stateRefs.size == 1) {
+                        val e = stateRefs.first()
+                        q.and((VaultStatesEntity.TX_ID eq e.txhash.toString()) and (VaultStatesEntity.INDEX eq e.index))
+                    } else {
+                        q.and(stateRefCompositeColumn.`in`(stateRefArgs))
+                    }
+
+                    val updatedRows = q.get().value()
+
+                    /*
                     val updatedRows = update(VaultStatesEntity::class)
                             .set(VaultStatesEntity.LOCK_ID, lockId.toString())
                             .set(VaultStatesEntity.LOCK_UPDATE_TIME, softLockTimestamp)
                             .where(VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
                             .and((VaultStatesEntity.LOCK_ID eq lockId.toString()) or (VaultStatesEntity.LOCK_ID.isNull()))
                             .and(stateRefCompositeColumn.`in`(stateRefArgs)).get().value()
+                    */
                     if (updatedRows > 0 && updatedRows == stateRefs.size) {
                         log.trace("Reserving soft lock states for $lockId: $stateRefs")
                         FlowStateMachineImpl.currentStateMachine()?.hasSoftLockedStates = true
@@ -516,5 +544,28 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
      */
     private fun stateRefArgs(stateRefs: Iterable<StateRef>): List<List<Any>> {
         return stateRefs.map { listOf("'${it.txhash}'", it.index) }
+    }
+
+    override fun loadByCustomKey(key: String): ContractState? {
+        try {
+            val state =
+                session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+                    val query = select(VaultStatesEntity::class)
+                        .where(VaultSchema.VaultStates::customKey eq key) limit 1
+                    val result = query.get().toList().get(0)
+                    result?.contractState?.deserialize<TransactionState<ContractState>>(storageKryo())
+                }
+            return state?.data
+        } catch (e: Exception) {
+            return null
+        }
+    }
+
+    override fun keyExists(key: String): Boolean {
+        return session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+            count(VaultStatesEntity::class)
+                .where(VaultSchema.VaultStates::customKey eq key)
+                .get().value()
+        } != 0
     }
 }

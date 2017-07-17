@@ -196,5 +196,16 @@ class CordaRPCOpsImpl(
         }
     }
 
+    override fun loadByCustomKey(key: String): ContractState? {
+        return database.transaction {
+            services.vaultService.loadByCustomKey(key)
+        }
+    }
+
+    override fun keyExists(key: String): Boolean {
+        return database.transaction {
+            services.vaultService.keyExists(key)
+        }
+    }
 }
 

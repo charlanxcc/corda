@@ -139,7 +139,8 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                              val notaryName: String,
                              val notaryKey: String,
                              val lockId: String?,
-                             val lockUpdateTime: Instant?)
+                             val lockUpdateTime: Instant?,
+                             val customKey: String?)
 
     @CordaSerializable
     data class PageAndUpdates<out T : ContractState> (val current: Vault.Page<T>, val future: Observable<Vault.Update>)
@@ -318,6 +319,10 @@ interface VaultService {
      */
     @Suspendable
     fun <T : ContractState> unconsumedStatesForSpending(amount: Amount<Currency>, onlyFromIssuerParties: Set<AbstractParty>? = null, notary: Party? = null, lockId: UUID, withIssuerRefs: Set<OpaqueBytes>? = null): List<StateAndRef<T>>
+
+    fun loadByCustomKey(key: String): ContractState?
+
+    fun keyExists(key: String): Boolean
 }
 
 // TODO: Remove this from the interface

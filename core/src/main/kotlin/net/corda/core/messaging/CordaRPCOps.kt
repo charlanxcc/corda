@@ -282,6 +282,10 @@ interface CordaRPCOps : RPCOps {
 
     /** Enumerates the class names of the flows that this node knows about. */
     fun registeredFlows(): List<String>
+
+    fun loadByCustomKey(key: String): ContractState?
+    
+    fun keyExists(key: String): Boolean
 }
 
 inline fun <reified T : ContractState> CordaRPCOps.vaultQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
