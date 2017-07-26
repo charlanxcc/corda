@@ -74,7 +74,7 @@ object VaultSchema {
         @get:Column(name = "lock_timestamp", nullable = true)
         var lockUpdateTime: Instant?
 
-        @get:Column(name = "custom_key", length = 1024, unique = true, nullable = true)
+        @get:Column(name = "custom_key", unique = true, nullable = true)
         var customKey: String?
     }
 }
