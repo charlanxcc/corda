@@ -64,7 +64,7 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             var lockUpdateTime: Instant?,
 
             /** custom key */
-            @Column(name = "custom_key", unique = true, nullable = false)
+            @Column(name = "custom_key", nullable = false)
             var customKey: String
     ) : PersistentState()
 

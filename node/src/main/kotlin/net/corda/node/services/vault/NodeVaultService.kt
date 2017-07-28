@@ -550,6 +550,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         try {
             val state =
                 session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+                    // TODO: need "order by recorded_timestamp DESC", maybe?
                     val query = select(VaultStatesEntity::class)
                         .where(VaultSchema.VaultStates::customKey eq key) limit 1
                     val result = query.get().toList().get(0)

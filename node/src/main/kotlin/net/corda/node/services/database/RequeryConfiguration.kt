@@ -53,6 +53,7 @@ class RequeryConfiguration(val properties: Properties, val useDefaultLogging: Bo
             conn.commit()
             conn.prepareStatement("Create Index If Not Exists ix1 On vault_states (state_status, lock_id, transaction_id, output_index)").executeUpdate()
             conn.prepareStatement("Create Index If Not Exists ix2 On vault_states (state_status, lock_id)").executeUpdate()
+            conn.prepareStatement("Create Index If Not Exists custom_ix On vault_states (custom_key asc, recorded_timestamp desc)").executeUpdate()
         }
         } catch (t: Throwable) {
             //logger.error(t.toString())
